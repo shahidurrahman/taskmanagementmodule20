@@ -1,0 +1,129 @@
+import 'dart:convert';
+
+import 'package:flutter/cupertino.dart';
+import 'package:http/http.dart';
+import 'package:logger/logger.dart';
+import 'package:taskmanagement/app.dart';
+import 'package:taskmanagement/project/ui/controller/auth_controller.dart';
+
+class ApiCaller {
+  static final Logger _logger = Logger();
+ static Future<ApiResponse> getRequest({required String url}) async {
+    try {
+      Uri uri = Uri.parse(url);
+      _logRequest(url);
+      Response response = await get(uri, headers:
+      {
+        'token' : AuthController.accessToken ?? ''
+      }
+      );
+      _logResponse(url, response);
+      final int statusCode = response.statusCode;
+      final decodedData = jsonDecode(response.body);
+      if (statusCode == 200) {
+        return ApiResponse(
+          responseCode: statusCode,
+          isSuccess: true,
+          responseData: decodedData,
+        );
+      }
+      else if(statusCode == 401){
+        await _movetoLogin();
+        return ApiResponse(
+            responseCode: -1,
+            isSuccess: false,
+            responseData: null);
+      }
+      else {
+        return ApiResponse(
+          responseCode: statusCode,
+          isSuccess: false,
+          responseData: decodedData,
+        );
+      }
+    } catch (e) {
+      return ApiResponse(responseCode: -1, isSuccess: false, responseData: null, errorMessage: e.toString());
+
+    }
+  }
+ static Future<ApiResponse> postRequest({required String url, Map<String, dynamic>? body}) async {
+    try {
+      Uri uri = Uri.parse(url);
+      _logRequest(url,body: body );
+      Response response = await post(uri,
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        'token' : AuthController.accessToken ?? ''
+
+      },
+      body: body != null ? jsonEncode(body): null,
+      );
+      _logResponse(url, response);
+      final int statusCode = response.statusCode;
+      final decodedData = jsonDecode(response.body);
+      if (statusCode == 200 || statusCode== 201) {
+        return ApiResponse(
+          responseCode: statusCode,
+          isSuccess: true,
+          responseData: decodedData,
+        );
+      }
+      else if(statusCode == 401){
+        await _movetoLogin();
+        return ApiResponse(
+            responseCode: -1,
+            isSuccess: false,
+            responseData: null);
+      }
+
+      else {
+        return ApiResponse(
+          responseCode: statusCode,
+          isSuccess: false,
+          responseData: decodedData,
+        );
+      }
+    } catch (e) {
+      return ApiResponse(responseCode: -1, isSuccess: false, responseData: null, errorMessage: e.toString());
+
+    }
+  }
+
+  static void _logRequest(String Url, {Map<String, dynamic>? body}) {
+    _logger.i(
+      'URL => $Url\n'
+          'Request Body => $body\n',
+    );
+  }
+
+  static void _logResponse(String Url, Response response) {
+    _logger.i(
+      'URL => $Url\n'
+          'Status code => ${response.statusCode}\n'
+          'Response Body => ${response.body}\n',
+    );
+  }
+    static Future<void>_movetoLogin() async {
+      await AuthController.clearUserData();
+      Navigator.pushNamedAndRemoveUntil(TaskManagement.navigator.currentContext!, '/Login', (predicate)=>false);
+  }
+
+
+}
+
+
+
+class ApiResponse {
+  final int responseCode;
+  final dynamic responseData;
+  final bool isSuccess;
+  final String? errorMessage;
+
+  ApiResponse({
+    required this.responseCode,
+    required this.isSuccess,
+    required this.responseData,
+    this.errorMessage = 'Something wrong',
+  });
+}
