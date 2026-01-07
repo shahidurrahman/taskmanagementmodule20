@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:taskmanagement/project/data/models/user_model.dart';
 import 'package:taskmanagement/project/data/services/api_caller.dart';
 import 'package:taskmanagement/project/data/utils/urls.dart';
@@ -9,6 +10,8 @@ import 'package:taskmanagement/project/ui/screen/main_nav_bar_holder_screen.dart
 import 'package:taskmanagement/project/ui/screen/sign_up_screen.dart';
 import 'package:taskmanagement/project/ui/weights/screen_background.dart'
     hide ScreenBackground;
+import 'package:taskmanagement/providers/auth_provider.dart';
+import 'package:taskmanagement/providers/network_provider.dart';
 
 import '../weights/screen_background.dart';
 
@@ -149,28 +152,14 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _signIn()async{
-    setState(() {
-      _signInProgress = true;
-    });
+    final networkProvider = Provider.of<NetworkProvider>(context,listen: false);
+    final authProvider = Provider.of<AuthProvider>(context,listen: false);
 
-    Map<String,dynamic>requestBody = {
-      "email":_emailController.text,
-      "password":_passwordController.text,
-    };
+    final result = await networkProvider.login(email: _emailController.text.trim(), password: _passwordController.text);
 
-    final ApiResponse response = await ApiCaller.postRequest(
-      url: Urls.loginUrl,
-      body: requestBody,
-    );
-
-    setState(() {
-      _signInProgress = false;
-    });
-
-    if(response.isSuccess){
-      UserModel model = UserModel.fromJson(response.responseData['data']);
-      String accessToken = response.responseData['token'];
-      await AuthController.saveUserData(model, accessToken);
+    if(result != null ){
+      await authProvider.saveUserData(result['user'], result['token']);
+      ApiCaller.accessToken = result['token'];
 
       _clearTextField();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -184,7 +173,7 @@ class _LoginPageState extends State<LoginPage> {
     }else{
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response.responseData['data']),
+        SnackBar(content: Text(networkProvider.errorMessage?? 'something wrong'),
           backgroundColor: Colors.red,
           duration: Duration(seconds: 5),
         ),

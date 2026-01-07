@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:taskmanagement/project/data/services/api_caller.dart';
 import 'package:taskmanagement/project/data/utils/urls.dart';
 import 'package:taskmanagement/project/ui/screen/forget_password_verify_otp.dart';
 import 'package:taskmanagement/project/ui/weights/screen_background.dart';
+import 'package:taskmanagement/providers/network_provider.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -190,29 +192,16 @@ class SignUpScreen extends StatefulWidget {
 
 
   Future<void> _signUp()async{
-    setState(() {
-      _signUpInProgress = true;
-    });
+    final networkProvider = Provider.of<NetworkProvider>(context,listen: false);
 
-    Map<String,dynamic>requestBody = {
-      "email":_emailController.text,
-      "firstName":_firstNameController.text,
-      "lastName":_lastNameController.text,
-      "mobile":_mobileController.text,
-      "password":_passwordController.text,
-    };
+    final result = networkProvider.register(
+        email: _emailController.text.trim(),
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        mobile: _mobileController.text.trim(),
+        password: _passwordController.text.trim());
 
-
-
-    final ApiResponse response = await ApiCaller.postRequest(
-      url: Urls.registrationUrl,
-      body: requestBody,
-    );
-    setState(() {
-      _signUpInProgress = false;
-    });
-
-    if(response.isSuccess){
+    if(result != null){
       _clearTextField();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Sign Up success..!'),
@@ -221,10 +210,11 @@ class SignUpScreen extends StatefulWidget {
         ),
 
       );
+      Navigator.pop(context);
     }else{
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response.responseData['data']),
+        SnackBar(content: Text(networkProvider.errorMessage ?? 'Something wrong'),
           backgroundColor: Colors.red,
           duration: Duration(seconds: 5),
         ),
@@ -232,6 +222,8 @@ class SignUpScreen extends StatefulWidget {
       );
     }
   }
+
+
 
 
 

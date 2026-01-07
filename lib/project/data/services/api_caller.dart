@@ -8,13 +8,14 @@ import 'package:taskmanagement/project/ui/controller/auth_controller.dart';
 
 class ApiCaller {
   static final Logger _logger = Logger();
+  static String ? accessToken;
  static Future<ApiResponse> getRequest({required String url}) async {
     try {
       Uri uri = Uri.parse(url);
       _logRequest(url);
       Response response = await get(uri, headers:
       {
-        'token' : AuthController.accessToken ?? ''
+        'token' : accessToken ?? ''
       }
       );
       _logResponse(url, response);
